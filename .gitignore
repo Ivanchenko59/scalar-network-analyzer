@@ -1,0 +1,15 @@
+useful-things/
+simulations/
+calculations/
+
+__Previews/
+History/
+
+
+Project\ Logs\ for\ */
+Project\ Outputs\ for\ */
+
+.settings
+## GPS-Tracker\ Debug.launch
+Debug/
+Release/
