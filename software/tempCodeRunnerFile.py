@@ -1,0 +1,5 @@
+self.app = QApplication([])
+        # # self.main_window = MainWindow(controller=self)
+        # self.main_window = QMainWindow()
+        # self.main_window.show()
+        # self.app.exec()
