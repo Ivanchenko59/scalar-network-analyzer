@@ -20,8 +20,7 @@ class Controller:
 
         # device
         self.device = Device()
-
-
+        
         # acquisition thread
         self.continuous_acquisition = False
         self.worker_wait_condition = QWaitCondition()
@@ -44,6 +43,15 @@ class Controller:
     def run_app(self):
         self.main_window.show()
         return self.app.exec_()
+
+    def set_min_freq(self, min_freq):
+        self.device.min_freq = min_freq
+
+    def set_max_freq(self, max_freq):
+        self.device.max_freq = max_freq
+
+    def set_step_freq(self, step_freq):
+        self.device.step_freq = step_freq
 
     def get_ports_names(self):
         return [p.device for p in serial.tools.list_ports.comports()]
@@ -83,6 +91,7 @@ class Controller:
         if self.device.is_connected():
             self.continuous_acquisition = False
             self.device.clean_buffers()
+            self.main_window.screen.clear_ch()
             self.worker_wait_condition.notify_one()
             return True
         else:
@@ -91,9 +100,6 @@ class Controller:
 
     def analyzer_continuous_run(self):
         if self.device.is_connected():
-            # self.timestamp_last_capture = time.time()
-            # self.spf = 1
-            # self.fps_timer.start(500)
             self.continuous_acquisition = True
             self.device.clean_buffers()
             # self.worker_wait_condition.notify_one()
@@ -104,13 +110,9 @@ class Controller:
 
     def analyzer_stop(self):
         self.continuous_acquisition = False
-        # self.fps_timer.stop()
 
     def data_ready_callback(self):
-        # curr_time = time.time()
-        # self.spf = 0.9 * (curr_time - self.timestamp_last_capture) + 0.1 * self.spf
-        # self.timestamp_last_capture = curr_time
-        self.main_window.screen.update_ch(
+        self.main_window.screen.plot_ch(
             self.acquisition_worker.data[0], self.acquisition_worker.data[1]
         )
         if self.continuous_acquisition == True:
@@ -139,7 +141,6 @@ class AcquisitionWorker(QObject):
             self.wait_condition.wait(self.mutex)
             self.mutex.unlock()
 
-            # self.data = self.device.write_freq()
             self.data = self.device.acquire_single()
             self.data_ready.emit()
 

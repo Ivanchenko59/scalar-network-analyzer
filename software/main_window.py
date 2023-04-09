@@ -9,7 +9,9 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QLabel,
     QLineEdit,
-    QMessageBox
+    QSpinBox,
+    QMessageBox,
+    QSizePolicy
 )
 import pyqtgraph as pg
 
@@ -17,19 +19,20 @@ import pyqtgraph as pg
 class AnalyzerScreen(pg.PlotWidget):
     def __init__(self, parent=None, plotItem=None, **kargs):
         super().__init__(parent=parent, background="w", plotItem=plotItem, **kargs)
-
+        
         styles = {"color": "k", "font-size": "12px"}
         self.setLabel("left", "V", **styles)
-        self.setLabel("bottom", "f", **styles)
+        self.setLabel("bottom", "Frequency", **styles)
 
         self.showGrid(x=True, y=True)
         self.setXRange(0, 5, padding=0.02)
         self.setYRange(0, 5, padding=0.02)
+        self.setLimits(xMin=-0.1)
 
         self.pen_ch1 = pg.mkPen(color="b", width=1)
 
-        self.x_points = [0,1]
-        self.y_points = [0,1]
+        self.x_points = [0]
+        self.y_points = [0]
 
         self.plot_ch(self.x_points, self.y_points)
 
@@ -40,10 +43,17 @@ class AnalyzerScreen(pg.PlotWidget):
         self.x_points.extend(x)
         self.y_points.extend(y)
         self.data_line_ch.setData(self.x_points, self.y_points)
+        # self.data_line_ch = self.plot(self.x_points, self.y_points)
+    
+    def clear_ch(self):
+        self.clear()
+
+    def set_axis(self, min, max):
+        self.setLimits(min, max)
 
 
 
-class LineEdit(QGroupBox):
+class SpinBox(QGroupBox):
     def __init__(self, controller, parent=None):
         super().__init__("Frequency", parent=parent)
         self.controller = controller
@@ -53,13 +63,50 @@ class LineEdit(QGroupBox):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
-        self.input_low_freq = QLineEdit("Low Frequency")
-        self.input_hight_freq = QLineEdit("High Frequency")
-        
-        layout.addWidget(self.input_low_freq)
-        layout.addWidget(self.input_hight_freq)
-        
-        # self.input.textChanged.connect
+        min_freq_layout = QHBoxLayout()
+        min_freq_label = QLabel("Min freq (kHz):")
+        self.spinbox_min_freq = QSpinBox()
+        self.spinbox_min_freq.setRange(100, 200000)
+        self.spinbox_min_freq.setValue(100)
+        min_freq_layout.addWidget(min_freq_label)
+        min_freq_layout.addWidget(self.spinbox_min_freq)
+
+        max_freq_layout = QHBoxLayout()
+        max_freq_label = QLabel("Max freq (kHz):")
+        self.spinbox_max_freq = QSpinBox()
+        self.spinbox_max_freq.setRange(100, 200000)
+        self.spinbox_max_freq.setValue(200000)
+        max_freq_layout.addWidget(max_freq_label)
+        max_freq_layout.addWidget(self.spinbox_max_freq)
+
+        step_freq_layout = QHBoxLayout()
+        step_freq_label = QLabel("Step (kHz):")
+        self.spinbox_step_freq = QSpinBox()
+        self.spinbox_step_freq.setRange(1, 10000)
+        self.spinbox_step_freq.setValue(1000)
+        step_freq_layout.addWidget(step_freq_label)
+        step_freq_layout.addWidget(self.spinbox_step_freq)
+
+        layout.addLayout(min_freq_layout)
+        layout.addLayout(max_freq_layout)
+        layout.addLayout(step_freq_layout)
+
+        self.spinbox_min_freq.valueChanged.connect(self.on_spinbox_min_freq_value_changed)
+        self.spinbox_max_freq.valueChanged.connect(self.on_spinbox_max_freq_value_changed)
+        self.spinbox_step_freq.valueChanged.connect(self.on_spinbox_step_freq_value_changed)
+
+    def on_spinbox_min_freq_value_changed(self, value):
+        self.controller.set_min_freq(value)
+        # self.screen.set_axis(value, 50)
+        print(value)
+
+    def on_spinbox_max_freq_value_changed(self, value):
+        self.controller.set_max_freq(value)
+        print(value)
+
+    def on_spinbox_step_freq_value_changed(self, value):
+        self.controller.set_step_freq(value)
+        print(value)
 
 
 class CalibrationBox(QGroupBox):
@@ -164,12 +211,12 @@ class ControlPanel(QFrame):
     def __init__(self, controller, parent=None):
         super().__init__(parent=parent)
         self.controller = controller
-
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setFrameStyle(QFrame.StyledPanel)
         self.setMaximumWidth(300)
 
         # widgets here
-        self.freq_panel = LineEdit(self.controller)
+        self.freq_panel = SpinBox(self.controller)
         self.calibr_panel = CalibrationBox(self.controller)
         self.acq_panel = AcquisitionBox(self.controller)
         self.dev_panel = DeviceBox(self.controller)
@@ -198,6 +245,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Scalar Network Analyzer")
 
         self.screen = AnalyzerScreen()
+        self.screen.setMinimumWidth(650)
         self.control_panel = ControlPanel(self.controller)
 
         self.content_layout = QHBoxLayout()
