@@ -13,3 +13,6 @@ Project\ Outputs\ for\ */
 ## sna\ Debug.launch
 Debug/
 Release/
+
+__pycache__/
+tempCodeRunnerFile.py

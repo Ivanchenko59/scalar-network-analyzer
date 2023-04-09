@@ -8,6 +8,8 @@ from device import Device
 import time
 import numpy as np
 
+import debugpy
+
 
 class Controller:
     def __init__(self):
@@ -19,8 +21,25 @@ class Controller:
         # device
         self.device = Device()
 
+
+        # acquisition thread
+        self.continuous_acquisition = False
+        self.worker_wait_condition = QWaitCondition()
+        self.acquisition_worker = AcquisitionWorker(
+            self.worker_wait_condition, device=self.device
+        )
+        self.acquisition_thread = QThread()
+        self.acquisition_worker.moveToThread(self.acquisition_thread)
+        self.acquisition_thread.started.connect(self.acquisition_worker.run)
+        self.acquisition_worker.finished.connect(self.acquisition_thread.quit)
+        # self.acquisition_worker.finished.connect(self.acquisition_thread.deleteLater)
+        # self.acquisition_thread.finished.connect(self.acquisition_worker.deleteLater)
+        self.acquisition_worker.data_ready.connect(self.data_ready_callback)
+        self.acquisition_thread.start()
+
         # on app exit
         self.app.aboutToQuit.connect(self.on_app_exit)
+
 
     def run_app(self):
         self.main_window.show()
@@ -59,12 +78,12 @@ class Controller:
         )
 
 
-# custom slots
+    # custom slots
     def analyzer_single_run(self):
         if self.device.is_connected():
             self.continuous_acquisition = False
             self.device.clean_buffers()
-            # self.worker_wait_condition.notify_one()
+            self.worker_wait_condition.notify_one()
             return True
         else:
             self.show_no_connection_message()
@@ -87,7 +106,41 @@ class Controller:
         self.continuous_acquisition = False
         # self.fps_timer.stop()
 
+    def data_ready_callback(self):
+        # curr_time = time.time()
+        # self.spf = 0.9 * (curr_time - self.timestamp_last_capture) + 0.1 * self.spf
+        # self.timestamp_last_capture = curr_time
+        self.main_window.screen.update_ch(
+            self.acquisition_worker.data[0], self.acquisition_worker.data[1]
+        )
+        if self.continuous_acquisition == True:
+            self.worker_wait_condition.notify_one()
 
     def on_app_exit(self):
         print("exiting")
 
+
+
+class AcquisitionWorker(QObject):
+
+    finished = Signal()
+    data_ready = Signal()
+
+    def __init__(self, wait_condition, device, parent=None):
+        super().__init__(parent=parent)
+        self.wait_condition = wait_condition
+        self.device = device
+        self.mutex = QMutex()
+
+    def run(self):
+        # debugpy.debug_this_thread()
+        while True:
+            self.mutex.lock()
+            self.wait_condition.wait(self.mutex)
+            self.mutex.unlock()
+
+            # self.data = self.device.write_freq()
+            self.data = self.device.acquire_single()
+            self.data_ready.emit()
+
+        self.finished.emit()

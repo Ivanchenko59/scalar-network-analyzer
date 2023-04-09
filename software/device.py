@@ -6,10 +6,10 @@ import numpy as np
 class Device:
 
     COM_CODES = {
-        "START": b"\x10",
+        "START": b"r",
         "GET_FIRMWARE": b"w",
         "CALIBRATE_FREQ": b"\x30",
-        "SET_FREQ": b"\x40",
+        "SET_FREQ": b"f",
         "STOP_GEN": b"\x50",
         "READ_DATA": b"\x60",
     }
@@ -18,6 +18,7 @@ class Device:
 
     def __init__(self):
         self.serial_port = serial.Serial()
+        # self.serial_port.timeout = 1
         self.serial_port.baudrate = self.BAUDRATE
 
     def connect(self, port):
@@ -28,24 +29,39 @@ class Device:
         self.firmware = self.get_firmware()
         print(self.firmware)
 
+
     def disconnect(self):
         self.serial_port.close()
 
     def write_freq(self):
-        self.serial_port.write(self.COM_CODES["SET_FREQ"][self.frequency])
+        # self.serial_port.write(f'{self.COM_CODES["SET_FREQ"]} {"1000"}'.encode())  # add freq data
+        data = self.serial_port.readline()
+        # print(int(data.rstrip('\0')))
 
     def clean_buffers(self):
         self.serial_port.reset_input_buffer()
         self.serial_port.reset_output_buffer()
 
     def acquire_single(self):
-        self.serial_port.write(self.COM_CODES["START"])
-        data = self.serial_port.read(size=self.BUFFER_SIZE)
-        data = np.frombuffer(data, dtype=np.uint8).astype(float) * 5 / 256
-        return data
+        x_ret = []
+        y_ret = []
+        # self.serial_port.write(f'{self.COM_CODES["START"]}'.encode())
+        # data = self.serial_port.readline()
+        # print(int(data.rstrip('\0')))
+        low_freq = 100
+        high_freq = 1000
+        step = 10
+
+        for freq in range(low_freq, high_freq, step):
+            x_ret.append(freq)
+            adc_data = self.get_firmware()
+            y_ret.append(int(adc_data))
+        
+        return x_ret, y_ret
+
 
     def get_firmware(self):
-        self.serial_port.write(self.COM_CODES["GET_FIRMWARE"])
+        ret_val = self.serial_port.write(self.COM_CODES["GET_FIRMWARE"])
         data = self.serial_port.readline()
         return data
     

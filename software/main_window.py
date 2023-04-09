@@ -23,18 +23,23 @@ class AnalyzerScreen(pg.PlotWidget):
         self.setLabel("bottom", "f", **styles)
 
         self.showGrid(x=True, y=True)
-        self.setXRange(0, 1, padding=0.02)
+        self.setXRange(0, 5, padding=0.02)
         self.setYRange(0, 5, padding=0.02)
 
         self.pen_ch1 = pg.mkPen(color="b", width=1)
 
-        self.plot_ch([0, 1, 2, 5], [0, 1, 2, 3])
+        self.x_points = [0,1]
+        self.y_points = [0,1]
+
+        self.plot_ch(self.x_points, self.y_points)
 
     def plot_ch(self, x, y, ch=1):
         self.data_line_ch = self.plot(x, y, pen=self.pen_ch1)
 
     def update_ch(self, x, y, ch=1):
-        self.data_line_ch.setData(x, y)
+        self.x_points.extend(x)
+        self.y_points.extend(y)
+        self.data_line_ch.setData(self.x_points, self.y_points)
 
 
 
