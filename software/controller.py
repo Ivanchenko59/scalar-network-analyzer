@@ -1,9 +1,12 @@
-from PySide6.QtCore import QMutex, QObject, QThread, QTimer, QWaitCondition, Signal
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QMutex, QObject, QThread, QTimer, QWaitCondition, Signal, Qt
+from PySide6.QtWidgets import QApplication, QMessageBox, QProgressDialog
 import serial.tools.list_ports
 
 from main_window import MainWindow
 from device import Device
+
+import json
+
 
 import time
 import numpy as np
@@ -106,6 +109,41 @@ class Controller:
             return True
         else:
             self.show_no_connection_message()
+            return False
+
+    def analyzer_calibration_mode(self):
+        if self.device.is_connected():
+            
+            self.progress_dialog = QProgressDialog("Calibrating...", "Cancel", self.device.min_freq, self.device.max_freq, self.main_window)
+            self.progress_dialog.setWindowTitle("Calibration Progress")
+            self.progress_dialog.setWindowModality(Qt.WindowModal)
+            self.progress_dialog.setCancelButton(None)
+            self.progress_dialog.setAutoClose(True)
+            self.progress_dialog.setAutoReset(True)
+            self.progress_dialog.show()
+
+            x_ret = []
+            y_ret = []
+
+            for freq in range(self.device.min_freq, self.device.max_freq + self.device.step_freq, self.device.step_freq):
+                if self.progress_dialog.wasCanceled():
+                    break
+                self.progress_dialog.setValue(freq)
+                QApplication.processEvents()
+                
+                x_ret.append(freq)
+                adc_data = self.device.measure_at_freq(freq)
+                y_ret.append(adc_data)
+
+            # Save data to JSON file
+            data = {'x': x_ret, 'y': y_ret}
+            with open('data.json', 'w') as f:
+                json.dump(data, f)
+
+            self.progress_dialog.close()
+            return True
+        else:
+            self.main_window.show_no_connection_message()
             return False
 
     def analyzer_stop(self):

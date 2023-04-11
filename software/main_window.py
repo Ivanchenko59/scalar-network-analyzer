@@ -25,8 +25,8 @@ class AnalyzerScreen(pg.PlotWidget):
         self.setLabel("bottom", "Frequency", **styles)
 
         self.showGrid(x=True, y=True)
-        self.setXRange(0, 5, padding=0.02)
-        self.setYRange(0, 5, padding=0.02)
+        self.setXRange(0, 2000, padding=0.02)
+        self.setYRange(0, 2000, padding=0.02)
         self.setLimits(xMin=-0.1)
 
         self.pen_ch1 = pg.mkPen(color="b", width=1)
@@ -49,15 +49,16 @@ class AnalyzerScreen(pg.PlotWidget):
         self.clear()
 
     def set_axis(self, min, max):
-        self.setLimits(min, max)
-
+        # self.setLimits(xMin=min, xMax=max)
+        # self.setXRange(min, max, padding=0.02)
+        pass
 
 
 class SpinBox(QGroupBox):
-    def __init__(self, controller, parent=None):
+    def __init__(self, controller, analyzer_screen, parent=None):
         super().__init__("Frequency", parent=parent)
         self.controller = controller
-
+        self.analyzer_screen = analyzer_screen
         # self.is_connected = False
 
         layout = QVBoxLayout()
@@ -97,7 +98,7 @@ class SpinBox(QGroupBox):
 
     def on_spinbox_min_freq_value_changed(self, value):
         self.controller.set_min_freq(value)
-        # self.screen.set_axis(value, 50)
+        # self.analyzer_screen.set_axis(value, 20000)
         print(value)
 
     def on_spinbox_max_freq_value_changed(self, value):
@@ -123,12 +124,10 @@ class CalibrationBox(QGroupBox):
 
         layout.addWidget(self.button_calibrate)
 
-        # self.button_calibrate.clicked.connect(self.on_calibrate_button)
+        self.button_calibrate.clicked.connect(self.on_calibrate_button)
 
     def on_calibrate_button(self):
-        # self.controller.analyzer_single_run()
-        # self.is_running = False
-        # self.button_run.setText("RUN")
+        self.controller.analyzer_calibration_mode()
         print("Calibration")
 
 
@@ -208,15 +207,17 @@ class DeviceBox(QGroupBox):
 
 
 class ControlPanel(QFrame):
-    def __init__(self, controller, parent=None):
+    def __init__(self, controller, analyzer_screen, parent=None):
         super().__init__(parent=parent)
         self.controller = controller
+        self.analyzer_screen = analyzer_screen
+
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setFrameStyle(QFrame.StyledPanel)
         self.setMaximumWidth(300)
 
         # widgets here
-        self.freq_panel = SpinBox(self.controller)
+        self.freq_panel = SpinBox(self.controller, self.analyzer_screen)
         self.calibr_panel = CalibrationBox(self.controller)
         self.acq_panel = AcquisitionBox(self.controller)
         self.dev_panel = DeviceBox(self.controller)
@@ -246,7 +247,7 @@ class MainWindow(QMainWindow):
 
         self.screen = AnalyzerScreen()
         self.screen.setMinimumWidth(650)
-        self.control_panel = ControlPanel(self.controller)
+        self.control_panel = ControlPanel(self.controller, self.screen)
 
         self.content_layout = QHBoxLayout()
         self.content_layout.addWidget(self.screen)

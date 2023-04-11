@@ -16,3 +16,5 @@ Release/
 
 __pycache__/
 tempCodeRunnerFile.py
+*.ini
+*.json

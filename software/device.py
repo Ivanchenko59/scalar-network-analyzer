@@ -21,9 +21,10 @@ class Device:
         self.serial_port = serial.Serial()
         # self.serial_port.timeout = 1
         self.serial_port.baudrate = self.BAUDRATE
+        # freq in kHz
         self.min_freq = 100
         self.max_freq = 200000
-        self.step_freq = 1000
+        self.step_freq = 50
     
 
     def connect(self, port):
