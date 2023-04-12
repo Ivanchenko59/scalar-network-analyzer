@@ -53,7 +53,7 @@ class Device:
         x_ret = []
         y_ret = []
 
-        for freq in range(self.min_freq, self.max_freq, self.step_freq):
+        for freq in range(self.min_freq, self.max_freq + self.step_freq, self.step_freq):
             x_ret.append(freq)
             adc_data = self.measure_at_freq(freq)
             y_ret.append(adc_data)

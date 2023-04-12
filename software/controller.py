@@ -17,6 +17,8 @@ import debugpy
 class Controller:
     def __init__(self):
 
+        self.filename = "calibration_data.json"
+
         # gui
         self.app = QApplication([])
         self.main_window = MainWindow(controller=self)
@@ -136,9 +138,8 @@ class Controller:
                 y_ret.append(adc_data)
 
             # Save data to JSON file
-            data = {'x': x_ret, 'y': y_ret}
-            with open('data.json', 'w') as f:
-                json.dump(data, f)
+            data = {"frequency": x_ret, "adc": y_ret}
+            self.write_calibration_data(data)
 
             self.progress_dialog.close()
             return True
@@ -150,8 +151,9 @@ class Controller:
         self.continuous_acquisition = False
 
     def data_ready_callback(self):
+        self.calibrated_data = self.perform_calibration(self.acquisition_worker.raw_data)
         self.main_window.screen.plot_ch(
-            self.acquisition_worker.data[0], self.acquisition_worker.data[1]
+            self.calibrated_data[0], self.calibrated_data[1]
         )
         if self.continuous_acquisition == True:
             self.worker_wait_condition.notify_one()
@@ -159,7 +161,21 @@ class Controller:
     def on_app_exit(self):
         print("exiting")
 
+    def write_calibration_data(self, data):
+        with open(self.filename, 'w') as f:
+            json.dump(data, f)
 
+    def read_calibration_data(self):
+        with open(self.filename, 'r') as file:
+            data = json.load(file)
+        return data
+
+    def perform_calibration(self, measurement_data):
+        calibration_data = self.read_calibration_data()
+        ampl_cal_interp = np.interp(measurement_data[0], calibration_data['frequency'], calibration_data['adc'])
+        # calibrated_data = [x - y for x,y in zip(measurement_data[1], ampl_cal_interp)]
+        calibrated_data = np.subtract(measurement_data[1], ampl_cal_interp)
+        return measurement_data[0], calibrated_data
 
 class AcquisitionWorker(QObject):
 
@@ -179,7 +195,7 @@ class AcquisitionWorker(QObject):
             self.wait_condition.wait(self.mutex)
             self.mutex.unlock()
 
-            self.data = self.device.acquire_single()
+            self.raw_data  = self.device.acquire_single()
             self.data_ready.emit()
 
         self.finished.emit()
