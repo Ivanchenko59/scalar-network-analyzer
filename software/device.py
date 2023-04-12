@@ -26,7 +26,6 @@ class Device:
         self.max_freq = 200000
         self.step_freq = 50
     
-
     def connect(self, port):
         print(port)
         self.serial_port.port = port
@@ -35,9 +34,11 @@ class Device:
         # self.firmware = self.get_firmware()
         # print(self.firmware)
 
-
     def disconnect(self):
         self.serial_port.close()
+
+    def is_connected(self):
+        return self.serial_port.is_open
 
     def measure_at_freq(self, freq):
         self.serial_port.write(f'{self.COM_CODES["MEASURE_AT_FREQ"]}{";"}{freq}'.encode())
@@ -49,21 +50,17 @@ class Device:
         self.serial_port.reset_input_buffer()
         self.serial_port.reset_output_buffer()
 
-    def acquire_single(self):
-        x_ret = []
-        y_ret = []
+    def acquire_single(self):    
+        data = {"frequency": [], "raw_adc": []}
 
         for freq in range(self.min_freq, self.max_freq + self.step_freq, self.step_freq):
-            x_ret.append(freq)
+            data['frequency'].append(freq)
             adc_data = self.measure_at_freq(freq)
-            y_ret.append(adc_data)
-        
-        return x_ret, y_ret
+            data['raw_adc'].append(adc_data)
+        return data
 
     def get_firmware(self):
         ret_val = self.serial_port.write(self.COM_CODES["GET_FIRMWARE"])
         data = self.serial_port.readline()
         return data
     
-    def is_connected(self):
-        return self.serial_port.is_open

@@ -1,16 +1,11 @@
-from PySide6.QtCore import QMutex, QObject, QThread, QTimer, QWaitCondition, Signal, Qt
+from PySide6.QtCore import QMutex, QObject, QThread, QWaitCondition, Signal, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox, QProgressDialog
-import serial.tools.list_ports
-
 from main_window import MainWindow
 from device import Device
 
-import json
-
-
-import time
+import serial.tools.list_ports
 import numpy as np
-
+import json
 import debugpy
 
 
@@ -49,14 +44,8 @@ class Controller:
         self.main_window.show()
         return self.app.exec_()
 
-    def set_min_freq(self, min_freq):
-        self.device.min_freq = min_freq
-
-    def set_max_freq(self, max_freq):
-        self.device.max_freq = max_freq
-
-    def set_step_freq(self, step_freq):
-        self.device.step_freq = step_freq
+    def on_app_exit(self):
+        print("exiting")
 
     def get_ports_names(self):
         return [p.device for p in serial.tools.list_ports.comports()]
@@ -90,8 +79,15 @@ class Controller:
             "No device is connected. Connect a device first.",
         )
 
+    def set_min_freq(self, min_freq):
+        self.device.min_freq = min_freq
 
-    # custom slots
+    def set_max_freq(self, max_freq):
+        self.device.max_freq = max_freq
+
+    def set_step_freq(self, step_freq):
+        self.device.step_freq = step_freq
+
     def analyzer_single_run(self):
         if self.device.is_connected():
             self.continuous_acquisition = False
@@ -116,7 +112,10 @@ class Controller:
     def analyzer_calibration_mode(self):
         if self.device.is_connected():
             
-            self.progress_dialog = QProgressDialog("Calibrating...", "Cancel", self.device.min_freq, self.device.max_freq, self.main_window)
+            self.progress_dialog = QProgressDialog(
+                "Calibrating...", "Cancel", 
+                self.device.min_freq, self.device.max_freq, self.main_window
+            )
             self.progress_dialog.setWindowTitle("Calibration Progress")
             self.progress_dialog.setWindowModality(Qt.WindowModal)
             self.progress_dialog.setCancelButton(None)
@@ -124,8 +123,7 @@ class Controller:
             self.progress_dialog.setAutoReset(True)
             self.progress_dialog.show()
 
-            x_ret = []
-            y_ret = []
+            data = {"frequency": [], "calib_adc": []}
 
             for freq in range(self.device.min_freq, self.device.max_freq + self.device.step_freq, self.device.step_freq):
                 if self.progress_dialog.wasCanceled():
@@ -133,12 +131,11 @@ class Controller:
                 self.progress_dialog.setValue(freq)
                 QApplication.processEvents()
                 
-                x_ret.append(freq)
+                data['frequency'].append(freq)
                 adc_data = self.device.measure_at_freq(freq)
-                y_ret.append(adc_data)
+                data['calib_adc'].append(adc_data)
 
             # Save data to JSON file
-            data = {"frequency": x_ret, "adc": y_ret}
             self.write_calibration_data(data)
 
             self.progress_dialog.close()
@@ -149,17 +146,6 @@ class Controller:
 
     def analyzer_stop(self):
         self.continuous_acquisition = False
-
-    def data_ready_callback(self):
-        self.calibrated_data = self.perform_calibration(self.acquisition_worker.raw_data)
-        self.main_window.screen.plot_ch(
-            self.calibrated_data[0], self.calibrated_data[1]
-        )
-        if self.continuous_acquisition == True:
-            self.worker_wait_condition.notify_one()
-
-    def on_app_exit(self):
-        print("exiting")
 
     def write_calibration_data(self, data):
         with open(self.filename, 'w') as f:
@@ -172,10 +158,22 @@ class Controller:
 
     def perform_calibration(self, measurement_data):
         calibration_data = self.read_calibration_data()
-        ampl_cal_interp = np.interp(measurement_data[0], calibration_data['frequency'], calibration_data['adc'])
-        # calibrated_data = [x - y for x,y in zip(measurement_data[1], ampl_cal_interp)]
-        calibrated_data = np.subtract(measurement_data[1], ampl_cal_interp)
-        return measurement_data[0], calibrated_data
+        ampl_cal_interp = np.interp(
+            measurement_data['frequency'], 
+            calibration_data['frequency'], 
+            calibration_data['calib_adc']
+        )
+        calibrated_data = np.subtract(measurement_data['raw_adc'], ampl_cal_interp)
+        return measurement_data['frequency'], calibrated_data
+
+    def data_ready_callback(self):
+        self.calibrated_data = self.perform_calibration(self.acquisition_worker.raw_data)
+        self.main_window.screen.plot_ch(
+            self.calibrated_data[0], self.calibrated_data[1]
+        )
+        if self.continuous_acquisition == True:
+            self.worker_wait_condition.notify_one()
+
 
 class AcquisitionWorker(QObject):
 
@@ -195,7 +193,7 @@ class AcquisitionWorker(QObject):
             self.wait_condition.wait(self.mutex)
             self.mutex.unlock()
 
-            self.raw_data  = self.device.acquire_single()
+            self.raw_data = self.device.acquire_single()
             self.data_ready.emit()
 
         self.finished.emit()
