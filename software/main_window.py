@@ -84,7 +84,7 @@ class SpinBox(QGroupBox):
         step_freq_label = QLabel("Step (kHz):")
         self.spinbox_step_freq = QSpinBox()
         self.spinbox_step_freq.setRange(1, 10000)
-        self.spinbox_step_freq.setValue(1000)
+        self.spinbox_step_freq.setValue(50)
         step_freq_layout.addWidget(step_freq_label)
         step_freq_layout.addWidget(self.spinbox_step_freq)
 
@@ -128,7 +128,7 @@ class CalibrationBox(QGroupBox):
 
     def on_calibrate_button(self):
         self.controller.analyzer_calibration_mode()
-        print("Calibration")
+        print("Calibrated")
 
 
 class AcquisitionBox(QGroupBox):
@@ -225,8 +225,8 @@ class ControlPanel(QFrame):
         self.layout = QVBoxLayout()
 
         # widgets here
-        self.layout.addWidget(self.freq_panel)
         self.layout.addWidget(self.calibr_panel)
+        self.layout.addWidget(self.freq_panel)
         self.layout.addWidget(self.acq_panel)
         self.layout.addStretch()
         self.layout.addWidget(self.dev_panel)

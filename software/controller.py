@@ -141,7 +141,7 @@ class Controller:
             self.progress_dialog.close()
             return True
         else:
-            self.main_window.show_no_connection_message()
+            self.show_no_connection_message()
             return False
 
     def analyzer_stop(self):
@@ -165,6 +165,18 @@ class Controller:
         )
         calibrated_data = np.subtract(measurement_data['raw_adc'], ampl_cal_interp)
         return measurement_data['frequency'], calibrated_data
+
+    def convert_adc_to_mV(self, data_adc):
+        data_mV = data_adc
+        return data_mV
+
+    def convert_mV_to_dBm(self, data_mV):
+        slope = 25          # mV / dBm
+        intercept = -84      # dBm
+        
+        data_dBm = data_mV / slope + intercept
+        return data_dBm
+
 
     def data_ready_callback(self):
         self.calibrated_data = self.perform_calibration(self.acquisition_worker.raw_data)
