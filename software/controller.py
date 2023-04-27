@@ -88,6 +88,9 @@ class Controller:
     def set_step_freq(self, step_freq):
         self.device.step_freq = step_freq
 
+    def measure_at_freq(self, frequency):
+        self.device.measure_at_freq(frequency)
+
     def analyzer_single_run(self):
         if self.device.is_connected():
             self.continuous_acquisition = False

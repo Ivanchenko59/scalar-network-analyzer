@@ -41,7 +41,7 @@ class Device:
         return self.serial_port.is_open
 
     def measure_at_freq(self, freq):
-        self.serial_port.write(f'{self.COM_CODES["MEASURE_AT_FREQ"]}{";"}{freq}'.encode())
+        self.serial_port.write(f'{self.COM_CODES["MEASURE_AT_FREQ"]}{";"}{freq * 1000}'.encode())
         data = int(self.serial_port.readline())
         print(data)
         return data

@@ -11,8 +11,12 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QSpinBox,
     QMessageBox,
-    QSizePolicy
+    QSizePolicy,
+    QDialog,
+    QGridLayout,
+    QTextEdit
 )
+from PySide6 import QtCore
 import pyqtgraph as pg
 
 
@@ -206,6 +210,41 @@ class DeviceBox(QGroupBox):
             self.button_connect.setText("Connect")
 
 
+
+class DebugButton(QPushButton):
+    def __init__(self, controller, parent=None):
+        super().__init__("Debug", parent=parent)
+
+        self.controller = controller
+        
+        self.clicked.connect(self.on_debug_button_clicked)
+        self.debug_window = DebugWindow(self.controller)
+
+    def on_debug_button_clicked(self):
+        self.debug_window.exec_()
+
+class DebugWindow(QDialog):
+    def __init__(self, controller, parent=None):
+        super().__init__(parent)
+
+        self.controller = controller
+
+        self.setWindowTitle("Debug")
+        self.setMinimumSize(200, 100)
+
+        layout = QVBoxLayout(self)
+        self.frequency_spinbox = QSpinBox()
+        self.frequency_spinbox.setRange(1, 10000)
+        self.frequency_spinbox.setValue(1000)
+        self.frequency_spinbox.setSingleStep(100)
+
+        layout.addWidget(self.frequency_spinbox)
+
+        self.frequency_spinbox.valueChanged.connect(self.on_frequency_changed)
+
+    def on_frequency_changed(self, value):
+        self.controller.measure_at_freq(value)
+ 
 class ControlPanel(QFrame):
     def __init__(self, controller, analyzer_screen, parent=None):
         super().__init__(parent=parent)
@@ -221,15 +260,17 @@ class ControlPanel(QFrame):
         self.calibr_panel = CalibrationBox(self.controller)
         self.acq_panel = AcquisitionBox(self.controller)
         self.dev_panel = DeviceBox(self.controller)
-
         self.layout = QVBoxLayout()
+        self.debug_panel = DebugButton(self.controller)
 
         # widgets here
         self.layout.addWidget(self.calibr_panel)
         self.layout.addWidget(self.freq_panel)
         self.layout.addWidget(self.acq_panel)
         self.layout.addStretch()
+
         self.layout.addWidget(self.dev_panel)
+        self.layout.addWidget(self.debug_panel)
 
         self.setLayout(self.layout)
 
