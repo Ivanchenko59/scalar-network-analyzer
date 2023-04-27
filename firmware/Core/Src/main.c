@@ -28,6 +28,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "usbd_cdc_if.h"
+#include "si5351.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,6 +38,12 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define FIRMWARE_VERSION   	"RTF_SNA"
+
+#define IF_FREQ   			455000
+#define TRIPLE_FREQ   		145000000
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,11 +54,16 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+const int32_t correction = 978;
+
 uint8_t buffer[32];
 char send_buf[8];
 char command = 0;
 uint32_t freq = 0;
 uint32_t adc_send = 0;
+uint32_t new_time = 0;
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,7 +74,19 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void UpdateFreq(uint32_t freq)
+{
+  if (freq < TRIPLE_FREQ)
+  {
+	  si5351_SetupCLK0(freq, SI5351_DRIVE_STRENGTH_2MA);
+  	  si5351_SetupCLK2(freq+IF_FREQ, SI5351_DRIVE_STRENGTH_2MA);
+  }
+  else
+  {
+	  si5351_SetupCLK0(freq/3, SI5351_DRIVE_STRENGTH_2MA);
+  	  si5351_SetupCLK2((freq+IF_FREQ)/3, SI5351_DRIVE_STRENGTH_2MA);
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -98,7 +122,10 @@ int main(void)
   MX_USART1_UART_Init();
   MX_ADC_Init();
   /* USER CODE BEGIN 2 */
-
+  si5351_Init(correction);
+  si5351_SetupCLK0(0, SI5351_DRIVE_STRENGTH_2MA);
+  si5351_SetupCLK2(0, SI5351_DRIVE_STRENGTH_2MA);
+  si5351_EnableOutputs((1 << 0) | (1 << 2));
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -106,19 +133,20 @@ int main(void)
   while (1)
   {
 
-//	  CDC_Transmit_FS((unsigned char*)str_tx, strlen(str_tx));
-//	  HAL_Delay(500);
 
-//	  sscanf((char*)buffer, "%c;%lu", &command, &freq);
-  //memset (buffer, '\0', 64);
 	  if (command == 'f')
 	  {
-		  adc_send = rand() % (2000 + 1);
+		  UpdateFreq(freq);
 		  adc_send = freq;
 		  sprintf(send_buf, "%u\n", adc_send);
 		  CDC_Transmit_FS((unsigned char*)send_buf, strlen(send_buf));
 		  command = '\0';
-  }
+	  }
+
+	  if (HAL_GetTick() - new_time > 500) {
+		  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+		  new_time = HAL_GetTick();
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
