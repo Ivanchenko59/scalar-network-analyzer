@@ -8,6 +8,7 @@ import numpy as np
 import json
 import debugpy
 
+from utils import get_smooth_func, filter_func
 
 class Controller:
     def __init__(self):
@@ -138,6 +139,9 @@ class Controller:
                 adc_data = self.device.measure_at_freq(freq)
                 data['calib_adc'].append(adc_data)
 
+            # data['calib_adc'] = get_smooth_func(data['calib_adc'])
+            data['calib_adc'] = filter_func(data['calib_adc'])
+
             # Save data to JSON file
             self.write_calibration_data(data)
 
@@ -166,12 +170,22 @@ class Controller:
             calibration_data['frequency'], 
             calibration_data['calib_adc']
         )
-        calibrated_data = np.subtract(measurement_data['raw_adc'], ampl_cal_interp)
+        calibrated_data = np.subtract(
+            self.convert_mV_array_to_dBm(self.convert_adc_array_to_mV(measurement_data['raw_adc'])), 
+            self.convert_mV_array_to_dBm(self.convert_adc_array_to_mV(ampl_cal_interp))
+            )
         return measurement_data['frequency'], calibrated_data
 
     def convert_adc_to_mV(self, data_adc):
-        data_mV = data_adc
+        data_mV = data_adc / 4095 * 3300
         return data_mV
+
+    def convert_adc_array_to_mV(self, data_adc_array):
+        data_mV_array = []
+        for data_adc in data_adc_array:
+            data_mV = data_adc / 4095 * 3300
+            data_mV_array.append(data_mV)
+        return data_mV_array
 
     def convert_mV_to_dBm(self, data_mV):
         slope = 25          # mV / dBm
@@ -179,13 +193,33 @@ class Controller:
         
         data_dBm = data_mV / slope + intercept
         return data_dBm
+    
+    def convert_mV_array_to_dBm(self, data_mV_array):
+        slope = 25          # mV / dBm
+        intercept = -84      # dBm
+        
+        data_dBm_array = []
+        for data_mV in data_mV_array:
+            data_dBm = data_mV / slope + intercept
+            data_dBm_array.append(data_dBm)
+        
+        return data_dBm_array
 
 
     def data_ready_callback(self):
         self.calibrated_data = self.perform_calibration(self.acquisition_worker.raw_data)
+        
         self.main_window.screen.plot_ch(
             self.calibrated_data[0], self.calibrated_data[1]
         )
+        
+        # self.main_window.screen.plot_ch(
+        #     self.acquisition_worker.raw_data['frequency'], self.acquisition_worker.raw_data['raw_adc']
+        # )
+        self.main_window.screen.plot_ch(
+            self.acquisition_worker.raw_data['frequency'], self.convert_mV_array_to_dBm(self.convert_adc_array_to_mV(self.acquisition_worker.raw_data['raw_adc']))
+        )
+
         if self.continuous_acquisition == True:
             self.worker_wait_condition.notify_one()
 

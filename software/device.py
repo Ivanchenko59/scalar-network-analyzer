@@ -2,6 +2,8 @@ import time
 import serial
 import numpy as np
 
+from utils import get_smooth_func
+from utils import filter_func
 
 class Device:
 
@@ -19,12 +21,12 @@ class Device:
 
     def __init__(self):
         self.serial_port = serial.Serial()
-        # self.serial_port.timeout = 1
+        self.serial_port.timeout = 2
         self.serial_port.baudrate = self.BAUDRATE
         # freq in kHz
         self.min_freq = 100
-        self.max_freq = 200000
-        self.step_freq = 50
+        self.max_freq = 400000
+        self.step_freq = 1000
     
     def connect(self, port):
         print(port)
@@ -41,7 +43,7 @@ class Device:
         return self.serial_port.is_open
 
     def measure_at_freq(self, freq):
-        self.serial_port.write(f'{self.COM_CODES["MEASURE_AT_FREQ"]}{";"}{freq * 1000}'.encode())
+        self.serial_port.write(f'{self.COM_CODES["MEASURE_AT_FREQ"]}{";"}{freq}'.encode())
         data = int(self.serial_port.readline())
         print(data)
         return data
@@ -57,6 +59,8 @@ class Device:
             data['frequency'].append(freq)
             adc_data = self.measure_at_freq(freq)
             data['raw_adc'].append(adc_data)
+            
+        # data['raw_adc'] = filter_func(data['raw_adc'])
         return data
 
     def get_firmware(self):

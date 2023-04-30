@@ -25,7 +25,7 @@ class AnalyzerScreen(pg.PlotWidget):
         super().__init__(parent=parent, background="w", plotItem=plotItem, **kargs)
         
         styles = {"color": "k", "font-size": "12px"}
-        self.setLabel("left", "V", **styles)
+        self.setLabel("left", "dBm", **styles)
         self.setLabel("bottom", "Frequency", **styles)
 
         self.showGrid(x=True, y=True)
@@ -33,7 +33,7 @@ class AnalyzerScreen(pg.PlotWidget):
         self.setYRange(0, 2000, padding=0.02)
         self.setLimits(xMin=-0.1)
 
-        self.pen_ch1 = pg.mkPen(color="b", width=1)
+        self.pen_ch1 = pg.mkPen(color="b", width=1.4)
 
         self.x_points = [0]
         self.y_points = [0]
@@ -71,7 +71,7 @@ class SpinBox(QGroupBox):
         min_freq_layout = QHBoxLayout()
         min_freq_label = QLabel("Min freq (kHz):")
         self.spinbox_min_freq = QSpinBox()
-        self.spinbox_min_freq.setRange(100, 200000)
+        self.spinbox_min_freq.setRange(100, 20000000)
         self.spinbox_min_freq.setValue(100)
         min_freq_layout.addWidget(min_freq_label)
         min_freq_layout.addWidget(self.spinbox_min_freq)
@@ -79,7 +79,7 @@ class SpinBox(QGroupBox):
         max_freq_layout = QHBoxLayout()
         max_freq_label = QLabel("Max freq (kHz):")
         self.spinbox_max_freq = QSpinBox()
-        self.spinbox_max_freq.setRange(100, 200000)
+        self.spinbox_max_freq.setRange(100, 400000000)
         self.spinbox_max_freq.setValue(200000)
         max_freq_layout.addWidget(max_freq_label)
         max_freq_layout.addWidget(self.spinbox_max_freq)
@@ -87,8 +87,8 @@ class SpinBox(QGroupBox):
         step_freq_layout = QHBoxLayout()
         step_freq_label = QLabel("Step (kHz):")
         self.spinbox_step_freq = QSpinBox()
-        self.spinbox_step_freq.setRange(1, 10000)
-        self.spinbox_step_freq.setValue(50)
+        self.spinbox_step_freq.setRange(1, 1000000)
+        self.spinbox_step_freq.setValue(1000)
         step_freq_layout.addWidget(step_freq_label)
         step_freq_layout.addWidget(self.spinbox_step_freq)
 
@@ -234,7 +234,7 @@ class DebugWindow(QDialog):
 
         layout = QVBoxLayout(self)
         self.frequency_spinbox = QSpinBox()
-        self.frequency_spinbox.setRange(1, 10000)
+        self.frequency_spinbox.setRange(1, 500000000)
         self.frequency_spinbox.setValue(1000)
         self.frequency_spinbox.setSingleStep(100)
 
