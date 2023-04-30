@@ -21,7 +21,7 @@ def perform_calibration(measurement_data):
     )
     calibrated_data = np.subtract(
         convert_adc_array_to_dBm(measurement_data['raw_adc']), 
-        convert_adc_array_to_dBm(convert_adc_array_to_mV(ampl_cal_interp))
+        convert_adc_array_to_dBm(ampl_cal_interp)
         )
     return measurement_data['frequency'], calibrated_data
 

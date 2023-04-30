@@ -14,9 +14,11 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QDialog,
     QGridLayout,
-    QTextEdit
+    QTextEdit,
+    QCheckBox,
 )
 from PySide6 import QtCore
+from PySide6.QtCore import Qt
 import pyqtgraph as pg
 
 
@@ -35,19 +37,8 @@ class AnalyzerScreen(pg.PlotWidget):
 
         self.pen_ch1 = pg.mkPen(color="b", width=1.4)
 
-        self.x_points = [0]
-        self.y_points = [0]
-
-        self.plot_ch(self.x_points, self.y_points)
-
-    def plot_ch(self, x, y, ch=1):
+    def plot_ch(self, x, y):
         self.data_line_ch = self.plot(x, y, pen=self.pen_ch1)
-
-    def update_ch(self, x, y, ch=1):
-        self.x_points.extend(x)
-        self.y_points.extend(y)
-        self.data_line_ch.setData(self.x_points, self.y_points)
-        # self.data_line_ch = self.plot(self.x_points, self.y_points)
     
     def clear_ch(self):
         self.clear()
@@ -234,17 +225,62 @@ class DebugWindow(QDialog):
 
         layout = QVBoxLayout(self)
         self.frequency_spinbox = QSpinBox()
+        self.frequency_spinbox.setObjectName("frequency_spinbox")
         self.frequency_spinbox.setRange(1, 500000000)
         self.frequency_spinbox.setValue(1000)
         self.frequency_spinbox.setSingleStep(100)
 
         layout.addWidget(self.frequency_spinbox)
 
+        self.raw_adc_checkbox = QCheckBox("Raw ADC data")
+        self.raw_adc_checkbox.setObjectName("raw_adc_checkbox")
+        self.raw_adc_checkbox.setChecked(False)
+        layout.addWidget(self.raw_adc_checkbox)
+
+        self.raw_dbm_checkbox = QCheckBox("Raw dBm data")
+        self.raw_dbm_checkbox.setObjectName("raw_dbm_checkbox")
+        self.raw_dbm_checkbox.setChecked(False)
+        layout.addWidget(self.raw_dbm_checkbox)
+
+        self.calibration_json_checkbox = QCheckBox("Calibration JSON data")
+        self.calibration_json_checkbox.setObjectName("calibration_json_checkbox")
+        self.calibration_json_checkbox.setChecked(False)
+        layout.addWidget(self.calibration_json_checkbox)
+
         self.frequency_spinbox.valueChanged.connect(self.on_frequency_changed)
+        self.raw_adc_checkbox.stateChanged.connect(self.on_checkbox_changed)
+        self.raw_dbm_checkbox.stateChanged.connect(self.on_checkbox_changed)
+        self.calibration_json_checkbox.stateChanged.connect(self.on_checkbox_changed)
+
 
     def on_frequency_changed(self, value):
         self.controller.measure_at_freq(value)
- 
+
+    def on_checkbox_changed(self, state):
+        checkbox_name = self.sender().objectName()
+        # TODO: Qt.Checked is shit
+        if state == Qt.Checked:
+            if checkbox_name == "raw_adc_checkbox":
+                # self.raw_adc_data_curve.show()
+                pass
+            elif checkbox_name == "raw_dbm_checkbox":
+                # self.raw_dBm_curve.show()
+                pass
+            elif checkbox_name == "calibration_json_checkbox":
+                # self.calibration_json_data_curve.show()
+                pass
+        else:
+            if checkbox_name == "raw_adc_checkbox":
+                # self.raw_adc_data_curve.hide()
+                pass
+            elif checkbox_name == "raw_dbm_checkbox":
+                # self.raw_dBm_curve.hide()
+                pass
+            elif checkbox_name == "calibration_json_checkbox":
+                # self.calibration_json_data_curve.hide()
+                pass
+
+
 class ControlPanel(QFrame):
     def __init__(self, controller, analyzer_screen, parent=None):
         super().__init__(parent=parent)
@@ -261,7 +297,7 @@ class ControlPanel(QFrame):
         self.acq_panel = AcquisitionBox(self.controller)
         self.dev_panel = DeviceBox(self.controller)
         self.layout = QVBoxLayout()
-        self.debug_panel = DebugButton(self.controller)
+        self.debug_panel = DebugButton(self.controller, self.analyzer_screen)
 
         # widgets here
         self.layout.addWidget(self.calibr_panel)

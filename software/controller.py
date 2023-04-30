@@ -159,11 +159,9 @@ class Controller:
             self.calibrated_data[0], self.calibrated_data[1]
         )
         
-        # self.main_window.screen.plot_ch(
-        #     self.acquisition_worker.raw_data['frequency'], self.acquisition_worker.raw_data['raw_adc']
-        # )
         self.main_window.screen.plot_ch(
-            self.acquisition_worker.raw_data['frequency'], calib.convert_adc_array_to_dBm(self.acquisition_worker.raw_data['raw_adc'])
+            self.acquisition_worker.raw_data['frequency'], 
+            calib.convert_adc_array_to_dBm(self.acquisition_worker.raw_data['raw_adc'])
         )
 
         if self.continuous_acquisition == True:
