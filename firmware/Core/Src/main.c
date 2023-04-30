@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "dma.h"
 #include "i2c.h"
 #include "usart.h"
 #include "usb_device.h"
@@ -44,6 +45,8 @@
 #define IF_FREQ   			455000
 #define TRIPLE_FREQ   		145000000
 
+#define VREFINT_CAL_ADDR	0x1FFFF7BA
+#define VREFINT_CAL ((uint16_t*) VREFINT_CAL_ADDR)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -54,16 +57,17 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-const int32_t correction = 978;
+const int32_t correction = 0;
 
 uint8_t buffer[32];
 char send_buf[8];
 char command = 0;
 uint32_t freq = 0;
 uint32_t adc_send = 0;
-uint32_t new_time = 0;
+volatile uint32_t new_time = 0;
 
-
+volatile uint32_t adc[10];
+//volatile uint32_t Vdd = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -83,9 +87,19 @@ void UpdateFreq(uint32_t freq)
   }
   else
   {
-	  si5351_SetupCLK0(freq/3, SI5351_DRIVE_STRENGTH_2MA);
-  	  si5351_SetupCLK2((freq+IF_FREQ)/3, SI5351_DRIVE_STRENGTH_2MA);
+	  si5351_SetupCLK0(freq/3, SI5351_DRIVE_STRENGTH_4MA);
+  	  si5351_SetupCLK2((freq+IF_FREQ)/3, SI5351_DRIVE_STRENGTH_4MA);
   }
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+	volatile uint32_t sum = 0;
+	  for (int i = 0; i < 10; ++i)
+		 sum += adc[i];
+	  volatile uint16_t adc_avrg = sum / 10;
+	  sprintf(send_buf, "%u\n", adc_avrg);
+	  CDC_Transmit_FS((unsigned char*)send_buf, strlen(send_buf));
 }
 /* USER CODE END 0 */
 
@@ -96,7 +110,6 @@ void UpdateFreq(uint32_t freq)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -120,26 +133,42 @@ int main(void)
   MX_I2C1_Init();
   MX_USB_DEVICE_Init();
   MX_USART1_UART_Init();
+  MX_DMA_Init();
   MX_ADC_Init();
   /* USER CODE BEGIN 2 */
+  HAL_ADCEx_Calibration_Start(&hadc);
   si5351_Init(correction);
   si5351_SetupCLK0(0, SI5351_DRIVE_STRENGTH_2MA);
   si5351_SetupCLK2(0, SI5351_DRIVE_STRENGTH_2MA);
   si5351_EnableOutputs((1 << 0) | (1 << 2));
+
+//  HAL_ADC_Start_DMA(&hadc, (uint32_t*)adc, 10);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-
+//	  Vdd = 3300 * (*VREFINT_CAL)/adc[1];
 	  if (command == 'f')
 	  {
 		  UpdateFreq(freq);
-		  adc_send = freq;
-		  sprintf(send_buf, "%u\n", adc_send);
-		  CDC_Transmit_FS((unsigned char*)send_buf, strlen(send_buf));
+		  HAL_Delay(10);
+		  __NOP();
+		  __NOP();
+		  HAL_ADC_Start_DMA(&hadc, (uint32_t*)adc, 10);
+
+//	  HAL_ADC_Start(&hadc);
+//	 // Poll ADC1 Perihperal & TimeOut = 1mSec
+//	  HAL_ADC_PollForConversion(&hadc, 1);
+//	 // Read The ADC Conversion Result & Map It To PWM DutyCycle
+//	  adc_send = HAL_ADC_GetValue(&hadc);
+//	  sprintf(send_buf, "%u\n", adc_send);
+//	  CDC_Transmit_FS((unsigned char*)send_buf, strlen(send_buf));
+
+
+
 		  command = '\0';
 	  }
 
@@ -147,6 +176,11 @@ int main(void)
 		  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
 		  new_time = HAL_GetTick();
 	  }
+
+
+	  // Start ADC Conversion
+//	  HAL_Delay(50);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
