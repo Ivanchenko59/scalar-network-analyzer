@@ -20,5 +20,5 @@ def get_smooth_func(y_points):
 
 
 def filter_func(y_points):
-
-    return scipy.signal.medfilt(y_points)
+    
+    return list(scipy.signal.medfilt(y_points))

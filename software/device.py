@@ -5,6 +5,9 @@ import numpy as np
 from utils import get_smooth_func
 from utils import filter_func
 
+from datatypes import Data 
+from datatypes import PointType 
+
 class Device:
 
     COM_CODES = {
@@ -52,15 +55,15 @@ class Device:
         self.serial_port.reset_input_buffer()
         self.serial_port.reset_output_buffer()
 
-    def acquire_single(self):    
-        data = {"frequency": [], "raw_adc": []}
+    def acquire_single(self) -> Data:    
+        
+        data = Data([], [], PointType.RAW)
 
         for freq in range(self.min_freq, self.max_freq + self.step_freq, self.step_freq):
-            data['frequency'].append(freq)
+            data.frequency.append(freq)
             adc_data = self.measure_at_freq(freq)
-            data['raw_adc'].append(adc_data)
+            data.points.append(adc_data)
             
-        # data['raw_adc'] = filter_func(data['raw_adc'])
         return data
 
     def get_firmware(self):

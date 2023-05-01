@@ -26,6 +26,8 @@ class AnalyzerScreen(pg.PlotWidget):
     def __init__(self, parent=None, plotItem=None, **kargs):
         super().__init__(parent=parent, background="w", plotItem=plotItem, **kargs)
         
+        self.plot_map = {}
+
         styles = {"color": "k", "font-size": "12px"}
         self.setLabel("left", "dBm", **styles)
         self.setLabel("bottom", "Frequency", **styles)
@@ -37,11 +39,12 @@ class AnalyzerScreen(pg.PlotWidget):
 
         self.pen_ch1 = pg.mkPen(color="b", width=1.4)
 
-    def plot_ch(self, x, y):
-        self.data_line_ch = self.plot(x, y, pen=self.pen_ch1)
+    def plot_ch(self, x, y, plot_name='default'):
+        self.plot_map[plot_name] = self.plot(x, y, pen=self.pen_ch1)
     
-    def clear_ch(self):
-        self.clear()
+    def clear_ch(self, plot_name='default'):
+        if plot_name in self.plot_map:
+            self.plot_map[plot_name].clear()
 
     def set_axis(self, min, max):
         # self.setLimits(xMin=min, xMax=max)
@@ -203,22 +206,24 @@ class DeviceBox(QGroupBox):
 
 
 class DebugButton(QPushButton):
-    def __init__(self, controller, parent=None):
+    def __init__(self, controller, analyzer_screen, parent=None):
         super().__init__("Debug", parent=parent)
 
         self.controller = controller
+        self.analyzer_screen = analyzer_screen
         
         self.clicked.connect(self.on_debug_button_clicked)
-        self.debug_window = DebugWindow(self.controller)
+        self.debug_window = DebugWindow(self.controller, self.analyzer_screen)
 
     def on_debug_button_clicked(self):
         self.debug_window.exec_()
 
 class DebugWindow(QDialog):
-    def __init__(self, controller, parent=None):
+    def __init__(self, controller, analyzer_screen, parent=None):
         super().__init__(parent)
 
         self.controller = controller
+        self.analyzer_screen = analyzer_screen
 
         self.setWindowTitle("Debug")
         self.setMinimumSize(200, 100)
@@ -259,20 +264,17 @@ class DebugWindow(QDialog):
     def on_checkbox_changed(self, state):
         checkbox_name = self.sender().objectName()
         # TODO: Qt.Checked is shit
-        if state == Qt.Checked:
+        if state == 2:
             if checkbox_name == "raw_adc_checkbox":
-                # self.raw_adc_data_curve.show()
-                pass
+                self.analyzer_screen.plot_ch(self.controller.filtered_data.frequency, self.controller.filtered_data.points, checkbox_name)
             elif checkbox_name == "raw_dbm_checkbox":
-                # self.raw_dBm_curve.show()
                 pass
             elif checkbox_name == "calibration_json_checkbox":
                 # self.calibration_json_data_curve.show()
                 pass
         else:
             if checkbox_name == "raw_adc_checkbox":
-                # self.raw_adc_data_curve.hide()
-                pass
+                self.analyzer_screen.clear_ch(checkbox_name)
             elif checkbox_name == "raw_dbm_checkbox":
                 # self.raw_dBm_curve.hide()
                 pass
