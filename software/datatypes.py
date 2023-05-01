@@ -1,23 +1,23 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import List
-import json
 
 class PointType(Enum):
     RAW = 1
     MVOLTS = 2
     DB = 3
 
-
+ADC_RESOLUTION = 4095   # 12 bit
+VOLTAGE_REF = 3300      # mV
 
 def convert_adc_to_mV(data_adc):
-    data_mV = data_adc / 4095 * 3300
+    data_mV = data_adc / ADC_RESOLUTION * VOLTAGE_REF
     return data_mV
 
 def convert_adc_array_to_mV(data_adc_array):
     data_mV_array = []
     for data_adc in data_adc_array:
-        data_mV = data_adc / 4095 * 3300
+        data_mV = data_adc / ADC_RESOLUTION * VOLTAGE_REF
         data_mV_array.append(data_mV)
     return data_mV_array
 
@@ -36,7 +36,6 @@ def convert_mV_array_to_dBm(data_mV_array):
     for data_mV in data_mV_array:
         data_dBm = data_mV / slope + intercept
         data_dBm_array.append(data_dBm)
-    
     return data_dBm_array
 
 def convert_adc_array_to_dBm(data_adc):

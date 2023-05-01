@@ -30,5 +30,5 @@ def perform_calibration(measurement_data):
     calibrated_data = np.subtract(
         measurement_data.convert_to(PointType.DB), 
         Data.convert_points_to(ampl_cal_interp, PointType.RAW, PointType.DB)
-        )
+    )
     return Data(measurement_data.frequency, calibrated_data, PointType.DB)

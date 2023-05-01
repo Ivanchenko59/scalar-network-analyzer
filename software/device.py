@@ -1,9 +1,5 @@
 import time
 import serial
-import numpy as np
-
-from utils import get_smooth_func
-from utils import filter_func
 
 from datatypes import Data 
 from datatypes import PointType 
@@ -19,7 +15,7 @@ class Device:
         "READ_DATA": b"\x60",
         "MEASURE_AT_FREQ": "f",
     }
-    BUFFER_SIZE = 100  # 512
+
     BAUDRATE = 115200
 
     def __init__(self):
@@ -56,14 +52,12 @@ class Device:
         self.serial_port.reset_output_buffer()
 
     def acquire_single(self) -> Data:    
-        
         data = Data([], [], PointType.RAW)
 
         for freq in range(self.min_freq, self.max_freq + self.step_freq, self.step_freq):
             data.frequency.append(freq)
             adc_data = self.measure_at_freq(freq)
-            data.points.append(adc_data)
-            
+            data.points.append(adc_data) 
         return data
 
     def get_firmware(self):

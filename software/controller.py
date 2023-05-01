@@ -7,7 +7,7 @@ import serial.tools.list_ports
 import debugpy
 
 import calibration as calib
-from utils import get_smooth_func, filter_func
+from utils import filter_func
 
 from datatypes import Data 
 from datatypes import PointType 
@@ -130,7 +130,6 @@ class Controller:
 
             data = Data([], [], PointType.RAW)
             
-            
             for freq in range(self.device.min_freq, self.device.max_freq + self.device.step_freq, self.device.step_freq):
                 if self.progress_dialog.wasCanceled():
                     break
@@ -141,8 +140,7 @@ class Controller:
                 adc_data = self.device.measure_at_freq(freq)
                 data.points.append(adc_data)
 
-            # data['calib_adc'] = get_smooth_func(data['calib_adc'])
-            # data['calib_adc'] = filter_func(data['calib_adc'])
+            data.points = filter_func(data.points)
 
             # Save data to JSON file
             calib.write_calibration_data(data)
@@ -156,10 +154,9 @@ class Controller:
     def analyzer_stop(self):
         self.continuous_acquisition = False
 
-
-    def data_ready_callback(self):
-        
-        self.filtered_data = Data(self.acquisition_worker.raw_data.frequency[:], [], PointType.RAW)
+    def data_ready_callback(self): 
+        self.raw_data = self.acquisition_worker.raw_data
+        self.filtered_data = Data(self.raw_data.frequency[:], [], PointType.RAW)
         self.filtered_data.points = filter_func(self.acquisition_worker.raw_data.points)
         
         self.calibrated_data = calib.perform_calibration(self.filtered_data)
@@ -168,23 +165,8 @@ class Controller:
             self.calibrated_data.frequency, self.calibrated_data.points
         )
         
-        # self.main_window.screen.plot_ch(
-        #     self.acquisition_worker.raw_data.frequency,
-        #     self.acquisition_worker.raw_data.convert_to(PointType.DB)
-        # )
-        # self.main_window.screen.plot_ch(
-        #     self.acquisition_worker.raw_data.frequency,
-        #     self.filtered_data.convert_to(PointType.DB)
-        # )
-
-        # self.main_window.screen.plot_ch(
-        #     self.acquisition_worker.raw_data['frequency'], 
-        #     calib.convert_adc_array_to_dBm(self.acquisition_worker.filtered_data['raw_adc'])
-        # )
-
         if self.continuous_acquisition == True:
             self.worker_wait_condition.notify_one()
-
 
 class AcquisitionWorker(QObject):
 

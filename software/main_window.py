@@ -8,18 +8,17 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QGroupBox,
     QLabel,
-    QLineEdit,
     QSpinBox,
-    QMessageBox,
+    QDoubleSpinBox,
     QSizePolicy,
     QDialog,
-    QGridLayout,
-    QTextEdit,
     QCheckBox,
 )
-from PySide6 import QtCore
-from PySide6.QtCore import Qt
 import pyqtgraph as pg
+from utils import convert_MHz_to_Hz
+
+from datatypes import Data 
+from datatypes import PointType 
 
 
 class AnalyzerScreen(pg.PlotWidget):
@@ -28,19 +27,22 @@ class AnalyzerScreen(pg.PlotWidget):
         
         self.plot_map = {}
 
-        styles = {"color": "k", "font-size": "12px"}
-        self.setLabel("left", "dBm", **styles)
+        styles = {"color": "k", "font-size": "14px"}
+        self.setLabel("left", "dB", **styles)
         self.setLabel("bottom", "Frequency", **styles)
 
         self.showGrid(x=True, y=True)
-        self.setXRange(0, 2000, padding=0.02)
-        self.setYRange(0, 2000, padding=0.02)
-        self.setLimits(xMin=-0.1)
+        self.setXRange(0, 145000000, padding=0.02)
+        self.setYRange(-70, 0, padding=0.02)
+        self.setLimits(xMin=-0.1, xMax=500000000)
+        self.setLimits(yMin=-100, yMax=20)
 
-        self.pen_ch1 = pg.mkPen(color="b", width=1.4)
+        self.pen_ch = pg.mkPen(color="b", width=1.5)
 
-    def plot_ch(self, x, y, plot_name='default'):
-        self.plot_map[plot_name] = self.plot(x, y, pen=self.pen_ch1)
+    def plot_ch(self, x, y, plot_name='default', pen1=None):
+        if pen1 is None:
+            pen1 = self.pen_ch
+        self.plot_map[plot_name] = self.plot(x, y, pen=pen1)
     
     def clear_ch(self, plot_name='default'):
         if plot_name in self.plot_map:
@@ -57,29 +59,30 @@ class SpinBox(QGroupBox):
         super().__init__("Frequency", parent=parent)
         self.controller = controller
         self.analyzer_screen = analyzer_screen
-        # self.is_connected = False
 
         layout = QVBoxLayout()
         self.setLayout(layout)
 
         min_freq_layout = QHBoxLayout()
-        min_freq_label = QLabel("Min freq (kHz):")
-        self.spinbox_min_freq = QSpinBox()
-        self.spinbox_min_freq.setRange(100, 20000000)
-        self.spinbox_min_freq.setValue(100)
+        min_freq_label = QLabel("Min freq (MHz):")
+        self.spinbox_min_freq = QDoubleSpinBox()
+        self.spinbox_min_freq.setDecimals(3)
+        self.spinbox_min_freq.setRange(0.1, 400)
+        self.spinbox_min_freq.setValue(0.1)
         min_freq_layout.addWidget(min_freq_label)
         min_freq_layout.addWidget(self.spinbox_min_freq)
 
         max_freq_layout = QHBoxLayout()
-        max_freq_label = QLabel("Max freq (kHz):")
-        self.spinbox_max_freq = QSpinBox()
-        self.spinbox_max_freq.setRange(100, 400000000)
-        self.spinbox_max_freq.setValue(200000)
+        max_freq_label = QLabel("Max freq (MHz):")
+        self.spinbox_max_freq = QDoubleSpinBox()
+        self.spinbox_max_freq.setDecimals(3)
+        self.spinbox_max_freq.setRange(0.1, 400)
+        self.spinbox_max_freq.setValue(400)
         max_freq_layout.addWidget(max_freq_label)
         max_freq_layout.addWidget(self.spinbox_max_freq)
 
         step_freq_layout = QHBoxLayout()
-        step_freq_label = QLabel("Step (kHz):")
+        step_freq_label = QLabel("Step (Hz):")
         self.spinbox_step_freq = QSpinBox()
         self.spinbox_step_freq.setRange(1, 1000000)
         self.spinbox_step_freq.setValue(1000)
@@ -95,12 +98,12 @@ class SpinBox(QGroupBox):
         self.spinbox_step_freq.valueChanged.connect(self.on_spinbox_step_freq_value_changed)
 
     def on_spinbox_min_freq_value_changed(self, value):
-        self.controller.set_min_freq(value)
+        self.controller.set_min_freq(convert_MHz_to_Hz(value))
         # self.analyzer_screen.set_axis(value, 20000)
         print(value)
 
     def on_spinbox_max_freq_value_changed(self, value):
-        self.controller.set_max_freq(value)
+        self.controller.set_max_freq(convert_MHz_to_Hz(value))
         print(value)
 
     def on_spinbox_step_freq_value_changed(self, value):
@@ -237,13 +240,13 @@ class DebugWindow(QDialog):
 
         layout.addWidget(self.frequency_spinbox)
 
-        self.raw_adc_checkbox = QCheckBox("Raw ADC data")
-        self.raw_adc_checkbox.setObjectName("raw_adc_checkbox")
+        self.raw_adc_checkbox = QCheckBox("Raw dB data")
+        self.raw_adc_checkbox.setObjectName("raw_dB_checkbox")
         self.raw_adc_checkbox.setChecked(False)
         layout.addWidget(self.raw_adc_checkbox)
 
-        self.raw_dbm_checkbox = QCheckBox("Raw dBm data")
-        self.raw_dbm_checkbox.setObjectName("raw_dbm_checkbox")
+        self.raw_dbm_checkbox = QCheckBox("Filtered dB data")
+        self.raw_dbm_checkbox.setObjectName("filtered_dB_checkbox")
         self.raw_dbm_checkbox.setChecked(False)
         layout.addWidget(self.raw_dbm_checkbox)
 
@@ -265,22 +268,25 @@ class DebugWindow(QDialog):
         checkbox_name = self.sender().objectName()
         # TODO: Qt.Checked is shit
         if state == 2:
-            if checkbox_name == "raw_adc_checkbox":
-                self.analyzer_screen.plot_ch(self.controller.filtered_data.frequency, self.controller.filtered_data.points, checkbox_name)
-            elif checkbox_name == "raw_dbm_checkbox":
-                pass
+            if checkbox_name == "raw_dB_checkbox":
+                self.analyzer_screen.plot_ch(
+                    self.controller.raw_data.frequency, 
+                    self.controller.raw_data.convert_to(PointType.DB), 
+                    checkbox_name, 
+                    pg.mkPen(color="r", width=1.5)
+                )
+            elif checkbox_name == "filtered_dB_checkbox":
+                self.analyzer_screen.plot_ch(
+                    self.controller.filtered_data.frequency, 
+                    self.controller.filtered_data.convert_to(PointType.DB), 
+                    checkbox_name,
+                    pg.mkPen(color="g", width=1.5)
+                )
             elif checkbox_name == "calibration_json_checkbox":
                 # self.calibration_json_data_curve.show()
                 pass
         else:
-            if checkbox_name == "raw_adc_checkbox":
-                self.analyzer_screen.clear_ch(checkbox_name)
-            elif checkbox_name == "raw_dbm_checkbox":
-                # self.raw_dBm_curve.hide()
-                pass
-            elif checkbox_name == "calibration_json_checkbox":
-                # self.calibration_json_data_curve.hide()
-                pass
+            self.analyzer_screen.clear_ch(checkbox_name)
 
 
 class ControlPanel(QFrame):
