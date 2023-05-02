@@ -21,7 +21,18 @@ def get_smooth_func(y_points):
 
 def filter_func(y_points):
     
-    return list(scipy.signal.medfilt(y_points))
+    return [int(x) for x in scipy.signal.medfilt(y_points).tolist()]
+    
+
 
 def convert_MHz_to_Hz(freq):
     return int(freq * 1000000)
+
+def convert_Hz_to_MHz(freq):
+    return freq / 1000000
+
+def convert_points_to_freq_step(min_freq, max_freq, points):
+    return int((max_freq - min_freq) / points)
+
+def convert_freq_step_to_points(min_freq, max_freq, freq_step):
+    return int((max_freq - min_freq) / freq_step)

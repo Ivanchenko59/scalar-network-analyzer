@@ -10,6 +10,7 @@ def write_calibration_data(data:Data):
              'frequency':data.frequency,
              'points':data.points
         }
+        print(type(data.frequency[0]), type(data.points[0]))
         with open(FILENAME, 'w') as f:
             json.dump(write_data, f)
             

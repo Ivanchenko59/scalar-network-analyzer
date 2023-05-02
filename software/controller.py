@@ -16,12 +16,13 @@ from datatypes import PointType
 class Controller:
     def __init__(self):
 
+        # device
+        self.device = Device()
+
         # gui
         self.app = QApplication([])
         self.main_window = MainWindow(controller=self)
 
-        # device
-        self.device = Device()
         
         # acquisition thread
         self.continuous_acquisition = False
@@ -89,6 +90,15 @@ class Controller:
 
     def set_step_freq(self, step_freq):
         self.device.step_freq = step_freq
+
+    def get_min_freq_in_Hz(self):
+        return self.device.min_freq
+
+    def get_max_freq_in_Hz(self):
+        return self.device.max_freq
+
+    def get_step_freq(self):
+        return self.device.step_freq
 
     def measure_at_freq(self, frequency):
         self.device.measure_at_freq(frequency)
