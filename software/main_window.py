@@ -15,10 +15,9 @@ from PySide6.QtWidgets import (
     QCheckBox,
 )
 import pyqtgraph as pg
-from utils import convert_MHz_to_Hz, convert_Hz_to_MHz, convert_points_to_freq_step, convert_freq_step_to_points
-
-from datatypes import Data 
 from datatypes import PointType 
+
+from utils import convert_MHz_to_Hz, convert_Hz_to_MHz, convert_points_to_freq_step, convert_freq_step_to_points
 
 
 class AnalyzerScreen(pg.PlotWidget):
@@ -32,9 +31,9 @@ class AnalyzerScreen(pg.PlotWidget):
         self.setLabel("bottom", "Frequency", **styles)
 
         self.showGrid(x=True, y=True)
-        self.setXRange(0, 145000000, padding=0.02)
+        self.setXRange(0, 450000000, padding=0.02)
         self.setYRange(-70, 0, padding=0.02)
-        self.setLimits(xMin=-0.1, xMax=500000000)
+        self.setLimits(xMin=-0.1, xMax=450000000)
         self.setLimits(yMin=-100, yMax=20)
 
         self.pen_ch = pg.mkPen(color="b", width=1.5)
@@ -49,8 +48,8 @@ class AnalyzerScreen(pg.PlotWidget):
             self.plot_map[plot_name].clear()
 
     def set_axis(self, min, max):
-        # self.setLimits(xMin=min, xMax=max)
-        # self.setXRange(min, max, padding=0.02)
+        self.setLimits(xMin=min, xMax=max)
+        self.setXRange(min, max, padding=0.02)
         pass
 
 
@@ -70,7 +69,7 @@ class SpinBox(QGroupBox):
         self.spinbox_min_freq.setRange(
             convert_Hz_to_MHz(self.controller.get_min_freq_in_Hz()), 
             convert_Hz_to_MHz(self.controller.get_max_freq_in_Hz())
-            )
+        )
         self.spinbox_min_freq.setValue(convert_Hz_to_MHz(self.controller.get_min_freq_in_Hz()))
         min_freq_layout.addWidget(min_freq_label)
         min_freq_layout.addWidget(self.spinbox_min_freq)
@@ -82,7 +81,7 @@ class SpinBox(QGroupBox):
         self.spinbox_max_freq.setRange(
             convert_Hz_to_MHz(self.controller.get_min_freq_in_Hz()), 
             convert_Hz_to_MHz(self.controller.get_max_freq_in_Hz())
-            )
+        )
         self.spinbox_max_freq.setValue(convert_Hz_to_MHz(self.controller.get_max_freq_in_Hz()))
         max_freq_layout.addWidget(max_freq_label)
         max_freq_layout.addWidget(self.spinbox_max_freq)
@@ -90,12 +89,13 @@ class SpinBox(QGroupBox):
         step_freq_layout = QHBoxLayout()
         step_freq_label = QLabel("Points:")
         self.spinbox_step_freq = QSpinBox()
-        self.spinbox_step_freq.setRange(1, 1000000)
+        self.spinbox_step_freq.setRange(1, 10000)
         self.spinbox_step_freq.setValue(
             convert_freq_step_to_points(self.controller.get_min_freq_in_Hz(),
                                         self.controller.get_max_freq_in_Hz(),
                                         self.controller.get_step_freq()
-                                        ))
+            )
+        )
                                         
         step_freq_layout.addWidget(step_freq_label)
         step_freq_layout.addWidget(self.spinbox_step_freq)
@@ -104,34 +104,34 @@ class SpinBox(QGroupBox):
         layout.addLayout(max_freq_layout)
         layout.addLayout(step_freq_layout)
 
-        self.spinbox_min_freq.valueChanged.connect(self.on_spinbox_min_freq_value_changed)
-        self.spinbox_max_freq.valueChanged.connect(self.on_spinbox_max_freq_value_changed)
-        self.spinbox_step_freq.valueChanged.connect(self.on_spinbox_step_freq_value_changed)
+        self.spinbox_min_freq.editingFinished.connect(self.on_spinbox_min_freq_editing_finished)
+        self.spinbox_max_freq.editingFinished.connect(self.on_spinbox_max_freq_editing_finished)
+        self.spinbox_step_freq.editingFinished.connect(self.on_spinbox_step_freq_editing_finished)
 
-    def on_spinbox_min_freq_value_changed(self, value):
-        self.controller.set_min_freq(convert_MHz_to_Hz(value))
-        # self.analyzer_screen.set_axis(value, 20000)
-        print(value)
+    def on_spinbox_min_freq_editing_finished(self):
+        value = convert_MHz_to_Hz(self.spinbox_min_freq.value())
+        self.controller.set_min_freq(value)
+        self.analyzer_screen.set_axis(value, self.controller.get_max_freq_in_Hz())
 
-    def on_spinbox_max_freq_value_changed(self, value):
-        self.controller.set_max_freq(convert_MHz_to_Hz(value))
-        print(value)
+    def on_spinbox_max_freq_editing_finished(self):
+        value = convert_MHz_to_Hz(self.spinbox_max_freq.value())
+        self.controller.set_max_freq(value)
+        self.analyzer_screen.set_axis(self.controller.get_min_freq_in_Hz(), value)
 
-    def on_spinbox_step_freq_value_changed(self, value):
+    def on_spinbox_step_freq_editing_finished(self):
+        value = self.spinbox_step_freq.value()
         self.controller.set_step_freq(
             convert_points_to_freq_step(self.controller.get_min_freq_in_Hz(),
                                         self.controller.get_max_freq_in_Hz(),
                                         value
-                                        ))
-        print(value)
+            )
+        )
 
 
 class CalibrationBox(QGroupBox):
     def __init__(self, controller, parent=None):
         super().__init__("Calibration", parent=parent)
         self.controller = controller
-
-        # self.is_running = False
 
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -315,7 +315,6 @@ class ControlPanel(QFrame):
         self.setMinimumWidth(180)
         self.setMaximumWidth(320)
 
-        # widgets here
         self.freq_panel = SpinBox(self.controller, self.analyzer_screen)
         self.calibr_panel = CalibrationBox(self.controller)
         self.acq_panel = AcquisitionBox(self.controller)
@@ -323,12 +322,10 @@ class ControlPanel(QFrame):
         self.layout = QVBoxLayout()
         self.debug_panel = DebugButton(self.controller, self.analyzer_screen)
 
-        # widgets here
         self.layout.addWidget(self.calibr_panel)
         self.layout.addWidget(self.freq_panel)
         self.layout.addWidget(self.acq_panel)
         self.layout.addStretch()
-
         self.layout.addWidget(self.dev_panel)
         self.layout.addWidget(self.debug_panel)
 

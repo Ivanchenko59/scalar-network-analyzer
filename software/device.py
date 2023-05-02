@@ -7,13 +7,12 @@ from datatypes import PointType
 class Device:
 
     COM_CODES = {
-        "START": b"r",
-        "GET_FIRMWARE": b"w",
-        "CALIBRATE_FREQ": b"\x30",
-        "SET_FREQ": b"f",
-        "STOP_GEN": b"\x50",
-        "READ_DATA": b"\x60",
+        "GET_FIRMWARE": b"\x10",
+        "SET_FREQ": b"\x20",
+        "READ_DATA": b"\x30",
         "MEASURE_AT_FREQ": "f",
+        "CALIBRATE_SI5351_FREQ": b"\x40",
+        "STOP_GEN": b"\x50",
     }
 
     BAUDRATE = 115200
@@ -24,8 +23,8 @@ class Device:
         self.serial_port.baudrate = self.BAUDRATE
         # freq in Hz
         self.min_freq = 100000
-        self.max_freq = 150000000
-        self.step_freq = 149900
+        self.max_freq = 450000000
+        self.step_freq = 449900
     
     def connect(self, port):
         print(port)

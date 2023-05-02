@@ -23,7 +23,6 @@ class Controller:
         self.app = QApplication([])
         self.main_window = MainWindow(controller=self)
 
-        
         # acquisition thread
         self.continuous_acquisition = False
         self.worker_wait_condition = QWaitCondition()
