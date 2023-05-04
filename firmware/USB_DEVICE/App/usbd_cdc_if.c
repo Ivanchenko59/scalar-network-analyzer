@@ -24,6 +24,7 @@
 
 /* USER CODE BEGIN INCLUDE */
 #include <stdio.h>
+#include "device.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -110,9 +111,8 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-extern uint8_t buffer[64];
-extern uint32_t freq;
-extern char command;
+extern uint8_t usb_receive_buffer[64];
+extern uint8_t usb_data_ready;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -264,12 +264,12 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   /* USER CODE BEGIN 6 */
 	USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
 	USBD_CDC_ReceivePacket(&hUsbDeviceFS);
-	memset (buffer, '\0', 64);  // clear the buffer
+	memset (usb_receive_buffer, '\0', 64);  // clear the buffer
 	uint8_t len = (uint8_t)*Len;
-	memcpy(buffer, Buf, len);  // copy the data to the buffer
+	memcpy(usb_receive_buffer, Buf, len);  // copy the data to the buffer
 	memset(Buf, '\0', len);   // clear the Buf also
 
-	sscanf((char*)buffer, "%c;%lu", &command, &freq);
+	usb_data_ready = 1;
 	return (USBD_OK);
   /* USER CODE END 6 */
 }
