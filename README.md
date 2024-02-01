@@ -2,7 +2,7 @@
 
 ## Description
 This project was created as my graduating project at the university.
-Scalar network analyzer developed to measure frequency response of filter, amplifier, transmission line and other frequency-dependent circuit.
+Scalar network analyzer developed to measure frequency response of filters, amplifiers, transmission lines or other frequency-dependent circuits.
 
 ## About the project
 
@@ -57,6 +57,10 @@ signal transmission lines, since the device must operate in systems with such wa
 ![зображення](https://github.com/Ivanchenko59/scalar-network-analyzer/assets/80352225/a7b8261a-c680-41bd-9830-19379ac72967)
 
 ## Software
+### CubeMX Connectivity 
+![image](https://github.com/Ivanchenko59/scalar-network-analyzer/assets/80352225/f87cdce6-87d8-4f01-a988-95ca98dc9529)
+
+## PC Application
 
 ## Testing
 The low-pass at 12 MHz LC filter was tested. The ideal characteristic in LTSpice is shown below.
